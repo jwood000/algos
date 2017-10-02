@@ -13,3 +13,5 @@ Encoding: UTF-8
 Imports: Rcpp (>= 0.12.8)
 LinkingTo: Rcpp
 NeedsCompilation: yes
+URL: https://github.com/jwood000/algos
+BugReports: https://github.com/jwood000/algos/issues
