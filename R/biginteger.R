@@ -35,14 +35,11 @@ print.bigz <- function(x, quote = FALSE, initLine = is.null(modulus(x)), ...)
 as.bigz <- function(a, mod = NA)
 {
     if(is.null(mod)) mod <- NA
-    if(inherits(a, "bigq"))
-        as.bigz.bigq(a, mod, PACKAGE = "algos")
-    else
-        .Call("biginteger_as", a, mod, PACKAGE = "algos")
+    .Call("biginteger_as", a, mod, PACKAGE = "algos")
 }
 ## the .as*() functions are exported for Rmpfr
 .as.bigz <- function(a, mod = NA) {
-    if(inherits(a, "bigq")) as.bigz.bigq(a, mod) else .Call("biginteger_as", a, mod, PACKAGE = "algos")
+    .Call("biginteger_as", a, mod, PACKAGE = "algos")
 }
 ..as.bigz <- function(a, mod = NA) .Call("biginteger_as", a, mod, PACKAGE = "algos")
 

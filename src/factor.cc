@@ -1,4 +1,6 @@
-/*! \file factor.cc
+/*! 
+ *  ******* Original factor.cc comments (pertaining to factorR) *******
+ *  \file factor.cc
  *  \brief C function used for factorization
  *
  *  \version 1
@@ -10,6 +12,12 @@
  *          Original C code from libgmp.
  *
  *  \note Licence: GPL
+ *  ************** End original comments *****************************
+ *  
+ *  \date Last modified: Time-stamp: <2017-10-02 17:19:50 jwood000>
+ *  
+ *  \author Joseph Wood
+ *  
  */
 
 #include "Rgmp.h"
@@ -18,6 +26,7 @@
 
 using namespace std;
 
+// Exact same function obtained from the gmp package
 SEXP factorR (SEXP n)
 {
     bigvec v = bigintegerR::create_bignum(n), result;

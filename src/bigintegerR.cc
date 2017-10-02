@@ -15,10 +15,6 @@
 #include "Rgmp.h"
 
 #include "bigintegerR.h"
-// only for  <bigz> ^ -|n| :
-#include "bigrationalR.h"
-
-#include "matrix.h"
 
 #include <vector>
 #include <algorithm>
@@ -224,8 +220,9 @@ namespace bigintegerR
     result.value.reserve(size);
     for (int i = 0; i < size; ++i)
 	result.push_back(f(va[i%va.size()], vb[i%vb.size()]));
-
-    result.nrow = matrixz::checkDims(va.nrow,vb.nrow);
+    
+    // Don't need matrix - Joseph Wood 10/2/17
+    // result.nrow = matrixz::checkDims(va.nrow,vb.nrow);
     // Rprintf(" o bigI_b_op(.); size=%d -> nrow=%d\n", size, result.nrow);
     return bigintegerR::create_SEXP(result);
   }
@@ -248,19 +245,20 @@ namespace bigintegerR
       else
 	r[i] = f(am, bm) ? 1 : 0;
     }
-
-    int nrow = matrixz::checkDims(va.nrow,vb.nrow) ;
+    
+    // Don't need matrix - Joseph Wood 10/2/17
+    // int nrow = matrixz::checkDims(va.nrow,vb.nrow) ;
 
     // Add dimension parameter when available
-    if(nrow >= 0)
-      {
-	SEXP dimVal;
-	PROTECT(dimVal = Rf_allocVector(INTSXP, 2));
-	INTEGER(dimVal)[0] = (int) nrow;
-	INTEGER(dimVal)[1] = (int) size / nrow;
-	Rf_setAttrib(ans, Rf_mkString("dim"), dimVal);
-	UNPROTECT(1);
-      }
+//     if(nrow >= 0)
+//       {
+// 	SEXP dimVal;
+// 	PROTECT(dimVal = Rf_allocVector(INTSXP, 2));
+// 	INTEGER(dimVal)[0] = (int) nrow;
+// 	INTEGER(dimVal)[1] = (int) size / nrow;
+// 	Rf_setAttrib(ans, Rf_mkString("dim"), dimVal);
+// 	UNPROTECT(1);
+//       }
 
     UNPROTECT(1);
     return ans;
@@ -300,9 +298,10 @@ SEXP biginteger_div (SEXP a, SEXP b) { // called from  "/.bigz" == div.bigz
     // Note: a or b may be simple numbers (e.g. '1') => work with (A,B)
     int len_m_a = A.modulus.size(),
 	len_m_b = B.modulus.size();
-    if(len_m_a == 0 && len_m_b == 0) // deal with important case quickly:
-	return bigrational_div(a, b);
-    else if(len_m_a == 0) { // and  len_m_b > 0:
+    // Don't need bigrational - Joseph Wood 10/2/17
+    // if(len_m_a == 0 && len_m_b == 0) // deal with important case quickly:
+	// return bigrational_div(a, b);
+    if(len_m_a == 0) { // and  len_m_b > 0:
 	// should work directly using b's "mod" --> compute  a * b^(-1)
     }
     else if(len_m_b == 0) { // and  len_m_a > 0:
@@ -323,7 +322,8 @@ SEXP biginteger_div (SEXP a, SEXP b) { // called from  "/.bigz" == div.bigz
 	    // compute   a * b^(-1) ... should work w/o more
 	} else {
 	    // use *rational* a/b  (not considering 'mod' anymore):
-	    return bigrational_div(a, b);
+	    // Don't need bigrational - Joseph Wood 10/2/17
+	    // return bigrational_div(a, b);
 	}
     }
     return bigintegerR::biginteger_binary_operation(a,b, div_via_inv);
@@ -341,12 +341,13 @@ SEXP biginteger_pow (SEXP a, SEXP b) {
 	break;
       }
     }
-    if (use_rat) { // a ^ b  with some b negative --> rational result
-      // 1)  a := as.bigq(a, 1)
-      SEXP aq = bigrational_as(a, Rf_ScalarInteger(1));
-      // 2)  result =  <bigq a> ^ b:
-      return bigrational_pow(aq, b);
-    }
+    // Don't need bigrational - Joseph Wood 10/2/17
+    // if (use_rat) { // a ^ b  with some b negative --> rational result
+    //   // 1)  a := as.bigq(a, 1)
+    //   SEXP aq = bigrational_as(a, Rf_ScalarInteger(1));
+    //   // 2)  result =  <bigq a> ^ b:
+    //   return bigrational_pow(aq, b);
+    // }
   }
   // else, either, a has a modulus, or (no modulus *and*  exp >= 0) :
   return bigintegerR::biginteger_binary_operation(a,b, pow); // -> pow() in ./bigmod.cc

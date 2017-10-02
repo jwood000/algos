@@ -24,7 +24,6 @@ this program.  If not, see http://www.gnu.org/licenses/.  */
 #include <math.h>
 #include "Rgmp.h"
 #include "factorize.h"
-#include "matrix.h"
 
 static unsigned char primes_diff[] = {
 #define P(a,b,c) a,
@@ -536,10 +535,12 @@ static bool solutionSearch (v2d mat, mpz_t M2, mpz_t n, v1d FB) {
     std::vector<signed long int>::iterator it;
     v2d myList;
     v1d freeVariables;
-    freeVariables.reserve(newNrow);
-
-    for (it = myCols.begin(); it < myCols.end(); it++) {
-
+    
+    if (ncol > newNrow) {
+        freeVariables.reserve(ncol - newNrow);
+        for (i = newNrow + 1; i < ncol; i++) {
+            
+        }
     }
 
     return(true);
