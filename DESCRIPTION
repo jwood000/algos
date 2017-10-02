@@ -16,3 +16,4 @@ LinkingTo: Rcpp
 NeedsCompilation: yes
 URL: https://github.com/jwood000/algos
 BugReports: https://github.com/jwood000/algos/issues
+RoxygenNote: 6.0.1

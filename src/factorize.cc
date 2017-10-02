@@ -528,8 +528,8 @@ static bool solutionSearch (v2d mat, mpz_t M2, mpz_t n, v1d FB) {
         }
     }
 
-    v1d myCols(ncol);
-    std::iota(myCols.begin(), myCols.end(), 0);
+    v1d myCols(ncol, 0);
+    for (i = 0; i < myCols.size(); i++) {myCols[i] = i;}
     reduceMatrix (ncol, nrow, nullMat, myCols);
 
     unsigned long int newNrow = nullMat.size();
