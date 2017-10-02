@@ -1,0 +1,15 @@
+Package: algos
+Type: Package
+Title: Tools for Combinatorics and Computational Mathematics
+Version: 0.1.0
+Author: Joseph Wood
+Maintainer: Joseph Wood <jwood000@gmail.com>
+Description: The 'algos’ package contains optimized functions implemented in 
+    C++/Rcpp for solving problems in combinatorics and computational mathematics.
+License: GPL (>=) 2
+BuildResaveData: no
+LazyDataNote: not available, as we use data/*.R *and* our classes
+Encoding: UTF-8
+Imports: Rcpp (>= 0.12.8)
+LinkingTo: Rcpp
+NeedsCompilation: yes

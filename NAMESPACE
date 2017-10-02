@@ -1,0 +1,17 @@
+useDynLib(algos, .registration=TRUE)
+
+importFrom(Rcpp, evalCpp)
+importMethodsFrom("methods", coerce)
+importFrom("methods",
+           setOldClass, setGeneric, setMethod)
+
+export(comboGeneral,
+       primeSieve,
+       eulerPhiSieve,
+       primeFactorizationList,
+       getDivisors,
+       print.bigz,
+       as.bigz,
+       primeFactorization,
+       quadraticSieve)
+
