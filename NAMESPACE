@@ -14,5 +14,7 @@ export(comboGeneral,
        as.bigz,
        primeFactorization,
        quadraticSieve,
-       quadraticResidue)
+       quadraticResidue,
+       numDivisorSieve,
+       divisorsList)
 

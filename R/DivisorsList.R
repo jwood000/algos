@@ -1,0 +1,1 @@
+divisorsList <- function(n) {DivisorListRcpp(n)}

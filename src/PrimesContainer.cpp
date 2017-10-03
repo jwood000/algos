@@ -6,7 +6,7 @@ using namespace Rcpp;
 // "AllPrimesC" implements an optimized version of the Sieve of Eratosthenes.
 // "RangePrimeC" will return all primes within a given range.
 
-IntegerVector AllPrimesCpp(int n) {
+IntegerVector AllPrimesCpp (int n) {
     std::vector<bool> primes(n+1, true);
     std::vector<int> myps;
     myps.reserve(floor(2*n/log(n)));
@@ -39,7 +39,7 @@ IntegerVector AllPrimesCpp(int n) {
     return wrap(myps);
 }
 
-IntegerVector RangePrimesCpp(int m, int n) {
+IntegerVector RangePrimesCpp (int m, int n) {
     int limit = n-m;
     std::vector<bool> primes(limit+1, true);
     std::vector<int> myps;
@@ -88,7 +88,7 @@ IntegerVector RangePrimesCpp(int m, int n) {
 }
 
 // [[Rcpp::export]]
-List PrimeFactorizationListRcpp(SEXP n) {
+List PrimeFactorizationListRcpp (SEXP n) {
     int m;
 
     switch(TYPEOF(n)) {
@@ -125,7 +125,7 @@ List PrimeFactorizationListRcpp(SEXP n) {
 }
 
 // [[Rcpp::export]]
-IntegerVector EulerPhiSieveRcpp(SEXP n) {
+IntegerVector EulerPhiSieveRcpp (SEXP n) {
     int m;
 
     switch(TYPEOF(n)) {
@@ -161,7 +161,7 @@ IntegerVector EulerPhiSieveRcpp(SEXP n) {
 }
 
 // [[Rcpp::export]]
-SEXP EratosthenesRcpp(SEXP Rb1, SEXP Rb2) {
+SEXP EratosthenesRcpp (SEXP Rb1, SEXP Rb2) {
     int bound1, bound2, myMax, myMin;
 
     switch(TYPEOF(Rb1)) {

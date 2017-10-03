@@ -5,8 +5,12 @@ ComboRcpp <- function(Rn, Rr, Rv, Rrep, fun1, fun2, lim, numRow) {
     .Call('algos_ComboRcpp', PACKAGE = 'algos', Rn, Rr, Rv, Rrep, fun1, fun2, lim, numRow)
 }
 
-NumFactorsSieve <- function(n) {
-    .Call('algos_NumFactorsSieve', PACKAGE = 'algos', n)
+NumDivisorsSieve <- function(n) {
+    .Call('algos_NumDivisorsSieve', PACKAGE = 'algos', n)
+}
+
+DivisorListRcpp <- function(n) {
+    .Call('algos_DivisorListRcpp', PACKAGE = 'algos', n)
 }
 
 PrimeFactorizationListRcpp <- function(n) {

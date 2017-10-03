@@ -23,14 +23,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// NumFactorsSieve
-IntegerVector NumFactorsSieve(int n);
-RcppExport SEXP algos_NumFactorsSieve(SEXP nSEXP) {
+// NumDivisorsSieve
+IntegerVector NumDivisorsSieve(SEXP n);
+RcppExport SEXP algos_NumDivisorsSieve(SEXP nSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< int >::type n(nSEXP);
-    rcpp_result_gen = Rcpp::wrap(NumFactorsSieve(n));
+    Rcpp::traits::input_parameter< SEXP >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(NumDivisorsSieve(n));
+    return rcpp_result_gen;
+END_RCPP
+}
+// DivisorListRcpp
+List DivisorListRcpp(SEXP n);
+RcppExport SEXP algos_DivisorListRcpp(SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(DivisorListRcpp(n));
     return rcpp_result_gen;
 END_RCPP
 }
