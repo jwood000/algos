@@ -22,10 +22,11 @@ extern "C"
   SEXP getDivisorsC (SEXP n);
   SEXP factorR (SEXP n);
   SEXP QuadraticSieveContainer (SEXP n);
+  SEXP QuadraticResidueContainer (SEXP n, SEXP p);
 
 }
 
-void TonelliShanksC (mpz_t a, signed long int p, bigvec & result);
+void TonelliShanksC (mpz_t a, mpz_t p, bigvec & result);
 
 void QuadraticSieve (mpz_t a, double e1, double e2, unsigned long lb);
 

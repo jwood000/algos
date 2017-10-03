@@ -68,6 +68,7 @@ static R_CallMethodDef CallEntries[] = {
   CALLDEF(factorR, 1),
   CALLDEF(getDivisorsC, 1),
   CALLDEF(QuadraticSieveContainer, 1),
+  CALLDEF(QuadraticResidueContainer, 2),
 
     {NULL, NULL, 0}
 };

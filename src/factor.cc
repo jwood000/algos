@@ -140,3 +140,18 @@ SEXP QuadraticSieveContainer (SEXP n) {
 
     return bigintegerR::create_SEXP(result);
 }
+
+SEXP QuadraticResidueContainer (SEXP n, SEXP p) {
+    mpz_t nmpz, pmpz;
+    bigvec v1 = bigintegerR::create_bignum(n);
+    bigvec v2 = bigintegerR::create_bignum(p);
+    mpz_init(nmpz);
+    mpz_init(pmpz);
+    mpz_set(nmpz,v1[0].value.getValueTemp());
+    mpz_set(pmpz,v2[0].value.getValueTemp());
+    bigvec result;
+    
+    TonelliShanksC(nmpz, pmpz, result);
+    
+    return bigintegerR::create_SEXP(result);
+}

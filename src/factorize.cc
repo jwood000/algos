@@ -325,11 +325,11 @@ factor (mpz_t t, bigvec & factors)
   std::sort(factors.value.begin(), factors.value.end());
 }
 
-void TonelliShanksC (mpz_t a, signed long int p, bigvec & quadRes) {
-    mpz_t P1, s, myAns1, myAns2, temp, pmpz;
+void TonelliShanksC (mpz_t a, mpz_t p, bigvec & quadRes) {
+    mpz_t P1, s, myAns1, myAns2, temp;
     mpz_t Legendre2, n, b, g, x, Test, big2;
 
-    mpz_init_set_ui(pmpz, p); mpz_init_set_ui(P1, p);
+    mpz_init_set(P1, p);
     mpz_init(temp); mpz_init_set_ui(n, 2);
     mpz_init(Legendre2); mpz_sub_ui(P1, P1, 1);
     mpz_init_set(s, P1); mpz_init(myAns1); mpz_init(myAns2);
@@ -342,59 +342,59 @@ void TonelliShanksC (mpz_t a, signed long int p, bigvec & quadRes) {
     mpz_div_2exp (s, s, j);
 
     if (j == 1) {
-        mpz_add_ui (temp, pmpz, 1);
+        mpz_add_ui (temp, p, 1);
         mpz_div_2exp (temp, temp, 2);
-        mpz_powm (myAns1, a, temp, pmpz);
+        mpz_powm (myAns1, a, temp, p);
         mpz_neg (temp, myAns1);
-        mpz_mod (myAns2, temp, pmpz);
+        mpz_mod (myAns2, temp, p);
     } else {
         mpz_div_2exp (temp, P1, 1);
-        mpz_powm (Legendre2, n, temp, pmpz);
+        mpz_powm (Legendre2, n, temp, p);
         while (mpz_cmp_ui(Legendre2, 1) == 0) {
             mpz_add_ui(n, n, 1);
-            mpz_powm (Legendre2, n, temp, pmpz);
+            mpz_powm (Legendre2, n, temp, p);
         }
 
         mpz_add_ui(temp, s, 1);
         mpz_div_2exp(temp, temp, 1);
-        mpz_powm(x, a, temp, pmpz);
-        mpz_powm(b, a, s, pmpz);
-        mpz_powm(g, n, s, pmpz);
+        mpz_powm(x, a, temp, p);
+        mpz_powm(b, a, s, p);
+        mpz_powm(g, n, s, p);
 
         r = j;
         m = 1;
-        mpz_mod(Test, b, pmpz);
+        mpz_mod(Test, b, p);
 
         while ((mpz_cmp_ui(Test, 1) != 0) && (m != 0)) {
             m = 0;
-            mpz_mod(Test, b, pmpz);
+            mpz_mod(Test, b, p);
             while (mpz_cmp_ui(Test, 1) != 0) {
                 m++;
                 mpz_pow_ui(temp, big2, m);
-                mpz_powm(Test, b, temp, pmpz);
+                mpz_powm(Test, b, temp, p);
             }
             if (m != 0) {
                 mpz_pow_ui(temp, big2, r-m-1);
-                mpz_powm(temp, g, temp, pmpz);
+                mpz_powm(temp, g, temp, p);
                 mpz_mul(temp, temp, x);
-                mpz_mod(x, temp, pmpz);
+                mpz_mod(x, temp, p);
 
                 mpz_pow_ui(temp, big2, r-m);
-                mpz_powm(g, g, temp, pmpz);
+                mpz_powm(g, g, temp, p);
 
                 mpz_mul(temp, b, g);
-                mpz_mod(b, temp, pmpz);
+                mpz_mod(b, temp, p);
                 r = m;
             }
             mpz_set_ui(Test, 0);
         }
         mpz_set(myAns1, x);
-        mpz_sub(temp, pmpz, x);
-        mpz_mod(myAns2, temp, pmpz);
+        mpz_sub(temp, p, x);
+        mpz_mod(myAns2, temp, p);
     }
 
     mpz_clear (temp); mpz_clear (P1); mpz_clear (n); mpz_clear (Legendre2);
-    mpz_clear (s); mpz_clear (pmpz); mpz_clear (x); mpz_clear (b);
+    mpz_clear (s); mpz_clear (x); mpz_clear (b);
     mpz_clear (g); mpz_clear (Test); mpz_clear (big2);
 
     quadRes.push_back(myAns1);
@@ -531,65 +531,103 @@ static bool solutionSearch (v2d mat, mpz_t M2, mpz_t n, v1d FB) {
     for (i = 0; i < myCols.size(); i++) {myCols[i] = i;}
     reduceMatrix (ncol, nrow, nullMat, myCols);
 
-    unsigned long int newNrow = nullMat.size();
+    unsigned long int tLen, newNrow = nullMat.size();
     std::vector<signed long int>::iterator it;
-    v2d myList;
-    v1d freeVariables;
+    v2d myList(ncol, v1d());
+    v1d freeVariables, temp;
+    freeVariables.reserve(ncol);
     
     if (ncol > newNrow) {
-        freeVariables.reserve(ncol - newNrow);
-        for (i = newNrow + 1; i < ncol; i++) {
-            
+        for (i = newNrow + 1; i < ncol; i++) {freeVariables.push_back(myCols[i]);}
+        for (it = freeVariables.begin(); it < freeVariables.end(); it++) {
+            myList[*it].push_back(*it);
         }
     }
-
+    
+    bool allBigNewNrow;
+    
+    if (newNrow > 0) {
+        for (i = newNrow; i > 0; i--) {
+            temp.reserve(ncol);
+            for (j = 0; j < ncol; j++) {
+                if (nullMat[i][j] == 1) {
+                    temp.push_back(j);
+                }
+            }
+            if (temp.size() == 1) {
+                for (j = 0; j < nrow; j++) {nullMat[j][temp[0]] = 0;}
+                myList[myCols[i]].clear();
+                myList[myCols[i]].push_back(0);
+            } else {
+                temp.clear();
+                temp.reserve(ncol);
+                allBigNewNrow = true;
+                for (j = i+1; j < ncol; j++) {
+                    if (nullMat[i][j] == 1) {
+                        temp.push_back(j);
+                        if (allBigNewNrow) {
+                            if (j < newNrow) {  // possibly need to change to <=
+                                allBigNewNrow = false;
+                            }
+                        }
+                    }
+                }
+                
+                if (allBigNewNrow) {
+                    myList[myCols[i]].clear();
+                    for (j = 0; j < temp.size(); j++) {
+                        tLen = myList[myCols[temp[j]]].size();
+                        if (tLen > 0) {
+                            for (k = 0; k < tLen; j++) {
+                                myList[myCols[i]].push_back(myList[myCols[temp[k]]][j]);
+                            }
+                        }
+                    }
+                } else {
+                    for (it = temp.begin(); it < temp.end(); it++) {
+                        if (myList[myCols[i]].size() == 0) {
+                            tLen = myList[myCols[*it]].size();
+                            if (tLen > 0) {
+                                for (j = 0; j < tLen; j++) {
+                                    myList[myCols[i]].push_back(myList[myCols[*it]][j]);
+                                }
+                            }
+                        } else {
+                            // for (k = 0; k < )
+                        }
+                    }
+                }
+            }
+        }
+    }
     return(true);
 }
 
 // ## still in SOLUTION SEARCH
-//                     lenSimp <- nrow(simpMat); MyList <- vector("list",length=n1)
-    //                 MyFree <- mycols[which((1:n1)>lenSimp)];  for (i in MyFree) {MyList[[i]] <- i}
-    //                 if (is.null(lenSimp)) {lenSimp <- 0L}
-    //
-    //                 if (lenSimp>1L) {
-    //                     for (i in lenSimp:1L) {
-    //                         t <- which(simpMat[i,]==1L)
-    //                         if (length(t)==1L) {
-    //                             simpMat[ ,t] <- 0L
-    //                             MyList[[mycols[i]]] <- 0L
-    //                         } else {
-    //                             t1 <- t[t>i]
-    //                             if (all(t1 > lenSimp)) {
-    //                                 MyList[[mycols[i]]] <- MyList[[mycols[t1[1]]]]
-    //                                 if (length(t1)>1) {
-    //                                     for (j in 2:length(t1)) {MyList[[mycols[i]]] <- c(MyList[[mycols[i]]], MyList[[mycols[t1[j]]]])}
-    //                                 }
-    //                             }
-    //                             else {
-    //                                 for (j in t1) {
-    //                                     if (length(MyList[[mycols[i]]])==0L) {MyList[[mycols[i]]] <- MyList[[mycols[j]]]}
-    //                                     else {
-    //                                         e1 <- which(MyList[[mycols[i]]]%in%MyList[[mycols[j]]])
-    //                                         if (length(e1)==0) {
-    //                                             MyList[[mycols[i]]] <- c(MyList[[mycols[i]]],MyList[[mycols[j]]])
-    //                                         } else {
-    //                                             e2 <- which(!MyList[[mycols[j]]]%in%MyList[[mycols[i]]])
-    //                                             MyList[[mycols[i]]] <- MyList[[mycols[i]]][-e1]
-    //                                             if (length(e2)>0L) {MyList[[mycols[i]]] <- c(MyList[[mycols[i]]], MyList[[mycols[j]]][e2])}
-    //                                         }
-    //                                     }
-    //                                 }
-    //                             }
-    //                         }
-    //                     }
-    //                     TheList <- lapply(MyList, function(x) {if (length(x)==0L) {0} else {x}})
-    //                         list(TheList,MyFree)
-    //                 } else {
-    //                     list(NULL,NULL)
-    //                 }
-    //         } else {
-    //             list(NULL,NULL)
-    //         }
+//                     for (j in t1) {
+//                         if (length(MyList[[mycols[i]]])==0L) {MyList[[mycols[i]]] <- MyList[[mycols[j]]]}
+//                         else {
+//                                 e1 <- which(MyList[[mycols[i]]]%in%MyList[[mycols[j]]])
+//                                 if (length(e1)==0) {
+//                                     MyList[[mycols[i]]] <- c(MyList[[mycols[i]]],MyList[[mycols[j]]])
+//                                 } else {
+//                                     e2 <- which(!MyList[[mycols[j]]]%in%MyList[[mycols[i]]])
+//                                     MyList[[mycols[i]]] <- MyList[[mycols[i]]][-e1]
+//                                     if (length(e2)>0L) {MyList[[mycols[i]]] <- c(MyList[[mycols[i]]], MyList[[mycols[j]]][e2])}
+//                                 }
+//                             }
+//                         }
+//                     }
+//                 }
+//             }
+//             TheList <- lapply(MyList, function(x) {if (length(x)==0L) {0} else {x}})
+//                 list(TheList,MyFree)
+//         } else {
+//             list(NULL,NULL)
+//         }
+// } else {
+//     list(NULL,NULL)
+// }
 //     if (LF > 0L) {
 //         for (i in 2:min(10^8,(2^LF + 1L))) {
 //             PosAns <- MyIntToBit(i, LF)

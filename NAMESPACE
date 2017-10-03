@@ -13,5 +13,6 @@ export(comboGeneral,
        print.bigz,
        as.bigz,
        primeFactorization,
-       quadraticSieve)
+       quadraticSieve,
+       quadraticResidue)
 
