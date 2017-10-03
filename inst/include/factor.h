@@ -44,6 +44,8 @@ void factor_using_pollard_rho (mpz_t n, int a_int, unsigned long p, bigvec & res
 
 /** \brief Function that call an algorithm for factorization
  */
-void factor (mpz_t t, unsigned long p, bigvec & result);
+void factor (mpz_t t, bigvec & result);
+
+void allDivisors (mpz_t t, bigvec & result);
 
 #endif

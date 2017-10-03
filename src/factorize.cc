@@ -325,6 +325,82 @@ factor (mpz_t t, bigvec & factors)
   std::sort(factors.value.begin(), factors.value.end());
 }
 
+void
+allDivisors (mpz_t t, bigvec & factors)
+{
+    if (mpz_sgn (t) != 0)
+    {
+        factor_using_division (t, factors);
+        
+        if (mpz_cmp_ui (t, 1) != 0)
+        {
+            if (flag_verbose > 0)
+            {
+                //printf ("[is number prime?] ");
+            }
+            if (mp_prime_p (t))
+                factors.push_back( t);
+            else
+                factor_using_pollard_rho (t, 1, factors);
+        }
+    }
+    
+    std::sort(factors.value.begin(), factors.value.end());
+    std::vector<int> lengths;
+    std::vector<biginteger>::iterator it;
+    biginteger prev = factors.value[0];
+
+    unsigned long int i, j, k, n = factors.size(), numUni = 0;
+    mpz_t bigFacs[n];
+    lengths.reserve(n);
+    for (i = 0; i < n; i++) {mpz_init(bigFacs[i]);}
+
+    mpz_set(bigFacs[0], factors.value[0].getValue());
+    lengths.push_back(1);
+    k = 1;
+
+    for(it = factors.value.begin() + 1; it < factors.value.end(); it++) {
+        if (prev == *it) {
+            lengths[numUni]++;
+        } else {
+            numUni++;
+            prev = *it;
+            lengths.push_back(1);
+            mpz_set(bigFacs[numUni], factors[k].value.getValue());
+        }
+        k++;
+    }
+
+    unsigned long int mySize, ind, facSize = 1, numFacs = 1;
+    for (i = 0; i <= numUni; i++) {numFacs *= (lengths[i]+1);}
+
+    factors.clear();
+    factors.value.reserve(numFacs);
+    mpz_t temp;
+    mpz_init(temp);
+
+    for (i = 0; i <= lengths[0]; ++i) {
+        mpz_pow_ui(temp, bigFacs[0], i);
+        factors.push_back(temp);
+    }
+
+    if (numUni > 0) {
+        for (j = 1; j <= numUni; j++) {
+            facSize *= (lengths[j-1] + 1);
+            for (i = 1; i <= lengths[j]; i++) {
+                ind = i*facSize;
+                for (k = 0; k < facSize; k++) {
+                    mpz_pow_ui(temp, bigFacs[j], i);
+                    mpz_mul(temp, temp, factors[k].value.getValue());
+                    factors.push_back(temp);
+                }
+            }
+        }
+    }
+
+    std::sort(factors.value.begin(), factors.value.end());
+}
+
 void TonelliShanksC (mpz_t a, mpz_t p, bigvec & quadRes) {
     mpz_t P1, s, myAns1, myAns2, temp;
     mpz_t Legendre2, n, b, g, x, Test, big2;
