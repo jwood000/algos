@@ -51,11 +51,6 @@ factor_using_division (mpz_t t, bigvec & factors)
   unsigned long int p;
   int i;
 
-  if (flag_verbose > 0)
-    {
-      //printf ("[trial division] ");
-    }
-
   mpz_init (q);
 
   p = mpz_scan1 (t, 0);
@@ -184,8 +179,6 @@ mp_prime_p (mpz_t n)
 	}
     }
 
-  //fprintf (stderr, "Lucas prime test failure.  This should not happen\n");
-  //abort ();
   error( "Lucas prime test failure.  This should not happen\n");
  ret1:
   if (flag_prove_primality)
@@ -206,11 +199,6 @@ factor_using_pollard_rho (mpz_t n, unsigned long a, bigvec & factors)
   mpz_t x, z, y, P;
   mpz_t t, t2;
   unsigned long  k, l, i;
-
-  if (flag_verbose > 0)
-    {
-      //printf ("[pollard-rho (%lu)] ", a);
-    }
 
   mpz_init (t);
   mpz_init(t2);
@@ -273,10 +261,6 @@ factor_using_pollard_rho (mpz_t n, unsigned long a, bigvec & factors)
 
       if (!mp_prime_p (t))
 	{
-	  if (flag_verbose > 0)
-	    {
-	      //printf ("[composite factor--restarting pollard-rho] ");
-	    }
 	  factor_using_pollard_rho (t, a + 1, factors);
 	}
       else
@@ -312,10 +296,6 @@ factor (mpz_t t, bigvec & factors)
 
       if (mpz_cmp_ui (t, 1) != 0)
 	{
-	  if (flag_verbose > 0)
-	    {
-	      //printf ("[is number prime?] ");
-	    }
 	  if (mp_prime_p (t))
 	    factors.push_back( t);
 	  else
@@ -325,19 +305,13 @@ factor (mpz_t t, bigvec & factors)
   std::sort(factors.value.begin(), factors.value.end());
 }
 
-void
-allDivisors (mpz_t t, bigvec & factors)
-{
+void allDivisors (mpz_t t, bigvec & factors) {
     if (mpz_sgn (t) != 0)
     {
         factor_using_division (t, factors);
         
         if (mpz_cmp_ui (t, 1) != 0)
         {
-            if (flag_verbose > 0)
-            {
-                //printf ("[is number prime?] ");
-            }
             if (mp_prime_p (t))
                 factors.push_back( t);
             else
@@ -397,7 +371,7 @@ allDivisors (mpz_t t, bigvec & factors)
             }
         }
     }
-
+    
     std::sort(factors.value.begin(), factors.value.end());
 }
 
@@ -469,14 +443,20 @@ void TonelliShanksC (mpz_t a, mpz_t p, bigvec & quadRes) {
         mpz_mod(myAns2, temp, p);
     }
 
-    mpz_clear (temp); mpz_clear (P1); mpz_clear (n); mpz_clear (Legendre2);
-    mpz_clear (s); mpz_clear (x); mpz_clear (b);
-    mpz_clear (g); mpz_clear (Test); mpz_clear (big2);
-
     quadRes.push_back(myAns1);
     quadRes.push_back(myAns2);
+}
 
-    mpz_clear (myAns1); mpz_clear (myAns2);
+static inline v1d outersect (v1d x, v1d y) {
+    std::sort(x.begin(), x.end());
+    std::sort(y.begin(), y.end());
+    unsigned long int lenX = x.size(), lenY = y.size();
+    v1d v(lenX + lenY);
+    std::vector<signed long int>::iterator it, it2;
+    it = std::set_difference(x.begin(), x.end(), y.begin(), y.end(), v.begin());
+    it2 = std::set_difference(y.begin(), y.end(), x.begin(), x.end(), it);
+    v.resize(it2 - v.begin());
+    return v;
 }
 
 static bigvec getFacs (bigvec v1, bigvec v2, mpz_t n) {
@@ -608,7 +588,7 @@ static bool solutionSearch (v2d mat, mpz_t M2, mpz_t n, v1d FB) {
     reduceMatrix (ncol, nrow, nullMat, myCols);
 
     unsigned long int tLen, newNrow = nullMat.size();
-    std::vector<signed long int>::iterator it;
+    std::vector<signed long int>::iterator it, it2;
     v2d myList(ncol, v1d());
     v1d freeVariables, temp;
     freeVariables.reserve(ncol);
@@ -621,6 +601,8 @@ static bool solutionSearch (v2d mat, mpz_t M2, mpz_t n, v1d FB) {
     }
     
     bool allBigNewNrow;
+    unsigned long int lenI;
+    v1d newVec;
     
     if (newNrow > 0) {
         for (i = newNrow; i > 0; i--) {
@@ -660,50 +642,27 @@ static bool solutionSearch (v2d mat, mpz_t M2, mpz_t n, v1d FB) {
                         }
                     }
                 } else {
+                    lenI = myList[myCols[i]].size();
                     for (it = temp.begin(); it < temp.end(); it++) {
-                        if (myList[myCols[i]].size() == 0) {
-                            tLen = myList[myCols[*it]].size();
-                            if (tLen > 0) {
-                                for (j = 0; j < tLen; j++) {
-                                    myList[myCols[i]].push_back(myList[myCols[*it]][j]);
-                                }
-                            }
-                        } else {
-                            // for (k = 0; k < )
-                        }
+                        Rprintf("\n%d", lenI);
+                        newVec = outersect(myList[myCols[i]], myList[myCols[*it]]);
+                        myList[myCols[i]].assign(newVec.begin(), newVec.end());
                     }
                 }
             }
         }
     }
+    
+    unsigned long int lenFree = freeVariables.size();
+    
+    if (lenFree > 0) {
+        
+    }
     return(true);
 }
 
 // ## still in SOLUTION SEARCH
-//                     for (j in t1) {
-//                         if (length(MyList[[mycols[i]]])==0L) {MyList[[mycols[i]]] <- MyList[[mycols[j]]]}
-//                         else {
-//                                 e1 <- which(MyList[[mycols[i]]]%in%MyList[[mycols[j]]])
-//                                 if (length(e1)==0) {
-//                                     MyList[[mycols[i]]] <- c(MyList[[mycols[i]]],MyList[[mycols[j]]])
-//                                 } else {
-//                                     e2 <- which(!MyList[[mycols[j]]]%in%MyList[[mycols[i]]])
-//                                     MyList[[mycols[i]]] <- MyList[[mycols[i]]][-e1]
-//                                     if (length(e2)>0L) {MyList[[mycols[i]]] <- c(MyList[[mycols[i]]], MyList[[mycols[j]]][e2])}
-//                                 }
-//                             }
-//                         }
-//                     }
-//                 }
-//             }
-//             TheList <- lapply(MyList, function(x) {if (length(x)==0L) {0} else {x}})
-//                 list(TheList,MyFree)
-//         } else {
-//             list(NULL,NULL)
-//         }
-// } else {
-//     list(NULL,NULL)
-// }
+//     listSol <- nullMat[[1]]; freeVar <- nullMat[[2]]; LF <- length(freeVar)
 //     if (LF > 0L) {
 //         for (i in 2:min(10^8,(2^LF + 1L))) {
 //             PosAns <- MyIntToBit(i, LF)

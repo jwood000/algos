@@ -1,1 +1,0 @@
-numDivisorSieve <- function(n) {NumDivisorsSieve(n)}
