@@ -12,9 +12,8 @@ export(comboGeneral,
        getDivisors,
        print.bigz,
        as.bigz,
-       primeFactorization,
-       quadraticSieve,
-       quadraticResidue,
+       multPolyQuadSieve,
+       quadResidue,
        numDivisorSieve,
        divisorsList)
 

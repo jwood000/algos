@@ -1,20 +1,42 @@
-/* Factoring with Pollard's rho method.
-
-Copyright 1995, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2005, 2009, 2012
-Free Software Foundation, Inc.
-
-This program is free software; you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation; either version 3 of the License, or (at your option) any later
-version.
-
-This program is distributed in the hope that it will be useful, but WITHOUT ANY
-WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
-PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License along with
-this program.  If not, see http://www.gnu.org/licenses/.  */
-
+/*! Factoring with Multiple Polynomial Quadratic Sieve.\
+ *  
+ *  From https://codegolf.stackexchange.com/ (Credit to user primo for answer)
+ *      P., & Chowdhury, S. (2012, October 7). Fastest semiprime factorization. Retrieved October 06, 2017, from 
+ *          https://codegolf.stackexchange.com/questions/8629/fastest-semiprime-factorization/9088#9088
+ *          
+ *  Paper 1
+ *      URL: http://www.ams.org/journals/mcom/1987-48-177/S0025-5718-1987-0866119-8/S0025-5718-1987-0866119-8.pdf
+ *      citation: Silverman, R. D. (1987). The Multiple Polynomial Quadratic Sieve. 
+ *                  Mathematics of Computation, 48(177), 329-339. doi:10.2307/2007894
+ *
+ *  Paper 2
+ *      URL: http://www.cs.virginia.edu/crab/QFS_Simple.pdf
+ *      author: Eric Landquist
+ *      date: December 14, 2001
+ *      title: The Quadratic Sieve Factoring Algorithm
+ *
+ *  Paper 3
+ *      URL: https://blogs.msdn.microsoft.com/devdev/2006/06/19/factoring-large-numbers-with-quadratic-sieve/
+ *      author: MSDN Archive
+ *      date: June 19, 2006
+ *      title: Factoring large numbers with quadratic sieve
+ *
+ *  Paper 4
+ *      URL: http://www.math.colostate.edu/~hulpke/lectures/m400c/quadsievex.pdf
+ *
+ *  Paper 5
+ *      URL: http://library.msri.org/books/Book44/files/03carl.pdf
+ *      citation: Pomerance, C. (2008). Smooth numbers and the quadratic sieve. In Algorithmic
+ *       Number Theory Lattices, Number Fields, Curves and Cryptography (pp. 69-81). 
+ *       Cambridge: Cambridge University Press.
+ *
+ *  Paper 6
+ *      URL: http://micsymposium.org/mics_2011_proceedings/mics2011_submission_28.pdf
+ *      author: Chad Seibert
+ *      date: March 16, 2011
+ *      title: Integer Factorization using the Quadratic Sieve
+ * 
+ */
 
 #include <cstdlib>
 #include <cstdio>
@@ -23,429 +45,11 @@ this program.  If not, see http://www.gnu.org/licenses/.  */
 #include <inttypes.h>
 #include <math.h>
 #include "Rgmp.h"
-#include "factorize.h"
-
-static unsigned char primes_diff[] = {
-#define P(a,b,c) a,
-#include "primes.h"
-#undef P
-};
-#define PRIMES_PTAB_ENTRIES (sizeof(primes_diff) / sizeof(primes_diff[0]))
-
-int flag_verbose = 0;
-
-/* Prove primality or run probabilistic tests.  */
-int flag_prove_primality = 1;
-
-/* Number of Miller-Rabin tests to run when not proving primality. */
-#define MR_REPS 25
+#include "quadraticsieve.h"
 
 typedef std::vector<signed long int> v1d;
 typedef std::vector<v1d> v2d;
 typedef std::vector<v2d> v3d;
-
-void
-factor_using_division (mpz_t t, bigvec & factors)
-{
-  mpz_t q;
-  unsigned long int p;
-  int i;
-
-  mpz_init (q);
-
-  p = mpz_scan1 (t, 0);
-  mpz_div_2exp (t, t, p);
-  while (p)
-    {
-      factors.push_back(2);
-      --p;
-    }
-
-  p = 3;
-  for (i = 1; i < PRIMES_PTAB_ENTRIES;)
-    {
-      if (! mpz_divisible_ui_p (t, p))
-	{
-	  p += primes_diff[i++];
-	  if (mpz_cmp_ui (t, p * p) < 0)
-	    break;
-	}
-      else
-	{
-	  mpz_tdiv_q_ui (t, t, p);
-	  factors.push_back( p);
-	}
-    }
-
-  mpz_clear (q);
-}
-
-static int
-mp_millerrabin (mpz_srcptr n, mpz_srcptr nm1, mpz_ptr x, mpz_ptr y,
-		mpz_srcptr q, unsigned long int k)
-{
-  unsigned long int i;
-
-  mpz_powm (y, x, q, n);
-
-  if (mpz_cmp_ui (y, 1) == 0 || mpz_cmp (y, nm1) == 0)
-    return 1;
-
-  for (i = 1; i < k; i++)
-    {
-      mpz_powm_ui (y, y, 2, n);
-      if (mpz_cmp (y, nm1) == 0)
-	return 1;
-      if (mpz_cmp_ui (y, 1) == 0)
-	return 0;
-    }
-  return 0;
-}
-
-int
-mp_prime_p (mpz_t n)
-{
-  int k, r, is_prime;
-  mpz_t q, a, nm1, tmp;
-
-  bigvec factors;
-
-  if (mpz_cmp_ui (n, 1) <= 0)
-    return 0;
-
-  /* We have already casted out small primes. */
-  if (mpz_cmp_ui (n, (long) FIRST_OMITTED_PRIME * FIRST_OMITTED_PRIME) < 0)
-    return 1;
-
-  mpz_init (q);
-  mpz_init(a);
-  mpz_init( nm1);
-  mpz_init(tmp);
-
-  /* Precomputation for Miller-Rabin.  */
-  mpz_sub_ui (nm1, n, 1);
-
-  /* Find q and k, where q is odd and n = 1 + 2**k * q.  */
-  k = mpz_scan1 (nm1, 0);
-  mpz_tdiv_q_2exp (q, nm1, k);
-
-  mpz_set_ui (a, 2);
-
-  /* Perform a Miller-Rabin test, finds most composites quickly.  */
-  if (!mp_millerrabin (n, nm1, a, tmp, q, k))
-    {
-      is_prime = 0;
-      goto ret2;
-    }
-
-  if (flag_prove_primality)
-    {
-      /* Factor n-1 for Lucas.  */
-      mpz_set (tmp, nm1);
-      factor (tmp, factors);
-    }
-
-  /* Loop until Lucas proves our number prime, or Miller-Rabin proves our
-     number composite.  */
-  for (r = 0; r < PRIMES_PTAB_ENTRIES; r++)
-    {
-      int i;
-
-      if (flag_prove_primality)
-	{
-	  is_prime = 1;
-	  for (i = 0; i < factors.size() && is_prime; i++)
-	    {
-	      mpz_divexact (tmp, nm1, factors[i].value.getValue());
-	      mpz_powm (tmp, a, tmp, n);
-	      is_prime = mpz_cmp_ui (tmp, 1) != 0;
-	    }
-	}
-      else
-	{
-	  /* After enough Miller-Rabin runs, be content. */
-	  is_prime = (r == MR_REPS - 1);
-	}
-
-      if (is_prime)
-	goto ret1;
-
-      mpz_add_ui (a, a, primes_diff[r]);	/* Establish new base.  */
-
-      if (!mp_millerrabin (n, nm1, a, tmp, q, k))
-	{
-	  is_prime = 0;
-	  goto ret1;
-	}
-    }
-
-  error( "Lucas prime test failure.  This should not happen\n");
- ret1:
-  if (flag_prove_primality)
-    factors.resize(0);
-
- ret2:
-  mpz_clear (q);
-  mpz_clear (a);
-  mpz_clear(nm1);
-  mpz_clear(tmp);
-
-  return is_prime;
-}
-
-void
-factor_using_pollard_rho (mpz_t n, unsigned long a, bigvec & factors)
-{
-  mpz_t x, z, y, P;
-  mpz_t t, t2;
-  unsigned long  k, l, i;
-
-  mpz_init (t);
-  mpz_init(t2);
-  mpz_init_set_si (y, 2);
-  mpz_init_set_si (x, 2);
-  mpz_init_set_si (z, 2);
-  mpz_init_set_ui (P, 1);
-  k = 1;
-  l = 1;
-
-  while (mpz_cmp_ui (n, 1) != 0)
-    {
-      for (;;)
-	{
-	  do
-	    {
-	      mpz_mul (t, x, x);
-	      mpz_mod (x, t, n);
-	      mpz_add_ui (x, x, a);
-
-	      mpz_sub (t, z, x);
-	      mpz_mul (t2, P, t);
-	      mpz_mod (P, t2, n);
-
-	      if (k % 32 == 1)
-		{
-		  mpz_gcd (t, P, n);
-		  if (mpz_cmp_ui (t, 1) != 0)
-		    goto factor_found;
-		  mpz_set (y, x);
-		}
-	    }
-	  while (--k != 0);
-
-	  mpz_set (z, x);
-	  k = l;
-	  l = 2 * l;
-	  for (i = 0; i < k; i++)
-	    {
-	      mpz_mul (t, x, x);
-	      mpz_mod (x, t, n);
-	      mpz_add_ui (x, x, a);
-	    }
-	  mpz_set (y, x);
-	}
-
-    factor_found:
-      do
-	{
-	  mpz_mul (t, y, y);
-	  mpz_mod (y, t, n);
-	  mpz_add_ui (y, y, a);
-
-	  mpz_sub (t, z, y);
-	  mpz_gcd (t, t, n);
-	}
-      while (mpz_cmp_ui (t, 1) == 0);
-
-      mpz_divexact (n, n, t);	/* divide by t, before t is overwritten */
-
-      if (!mp_prime_p (t))
-	{
-	  factor_using_pollard_rho (t, a + 1, factors);
-	}
-      else
-	{
-	  factors.push_back( t );
-	}
-
-      if (mp_prime_p (n))
-	{
-	  factors.push_back( n);
-	  break;
-	}
-
-      mpz_mod (x, x, n);
-      mpz_mod (z, z, n);
-      mpz_mod (y, y, n);
-    }
-
-  mpz_clear (P);
-  mpz_clear (t2);
-  mpz_clear (t);
-  mpz_clear (z);
-  mpz_clear (x);
-  mpz_clear (y);
-}
-
-void
-factor (mpz_t t, bigvec & factors)
-{
-  if (mpz_sgn (t) != 0)
-    {
-      factor_using_division (t, factors);
-
-      if (mpz_cmp_ui (t, 1) != 0)
-	{
-	  if (mp_prime_p (t))
-	    factors.push_back( t);
-	  else
-	    factor_using_pollard_rho (t, 1, factors);
-	}
-    }
-  std::sort(factors.value.begin(), factors.value.end());
-}
-
-void allDivisors (mpz_t t, bigvec & factors) {
-    if (mpz_sgn (t) != 0)
-    {
-        factor_using_division (t, factors);
-        
-        if (mpz_cmp_ui (t, 1) != 0)
-        {
-            if (mp_prime_p (t))
-                factors.push_back( t);
-            else
-                factor_using_pollard_rho (t, 1, factors);
-        }
-    }
-    
-    std::sort(factors.value.begin(), factors.value.end());
-    std::vector<int> lengths;
-    std::vector<biginteger>::iterator it;
-    biginteger prev = factors.value[0];
-
-    unsigned long int i, j, k, n = factors.size(), numUni = 0;
-    mpz_t bigFacs[n];
-    lengths.reserve(n);
-    for (i = 0; i < n; i++) {mpz_init(bigFacs[i]);}
-
-    mpz_set(bigFacs[0], factors.value[0].getValue());
-    lengths.push_back(1);
-    k = 1;
-
-    for(it = factors.value.begin() + 1; it < factors.value.end(); it++) {
-        if (prev == *it) {
-            lengths[numUni]++;
-        } else {
-            numUni++;
-            prev = *it;
-            lengths.push_back(1);
-            mpz_set(bigFacs[numUni], factors[k].value.getValue());
-        }
-        k++;
-    }
-
-    unsigned long int mySize, ind, facSize = 1, numFacs = 1;
-    for (i = 0; i <= numUni; i++) {numFacs *= (lengths[i]+1);}
-
-    factors.clear();
-    factors.value.reserve(numFacs);
-    mpz_t temp;
-    mpz_init(temp);
-
-    for (i = 0; i <= lengths[0]; ++i) {
-        mpz_pow_ui(temp, bigFacs[0], i);
-        factors.push_back(temp);
-    }
-
-    if (numUni > 0) {
-        for (j = 1; j <= numUni; j++) {
-            facSize *= (lengths[j-1] + 1);
-            for (i = 1; i <= lengths[j]; i++) {
-                ind = i*facSize;
-                for (k = 0; k < facSize; k++) {
-                    mpz_pow_ui(temp, bigFacs[j], i);
-                    mpz_mul(temp, temp, factors[k].value.getValue());
-                    factors.push_back(temp);
-                }
-            }
-        }
-    }
-    
-    std::sort(factors.value.begin(), factors.value.end());
-}
-
-void TonelliShanksC (mpz_t a, mpz_t p, bigvec & quadRes) {
-    mpz_t P1, s, myAns1, myAns2, temp;
-    mpz_t Legendre2, n, b, g, x, Test, big2;
-
-    mpz_init_set(P1, p);
-    mpz_init(temp); mpz_init_set_ui(n, 2);
-    mpz_init(Legendre2); mpz_sub_ui(P1, P1, 1);
-    mpz_init_set(s, P1); mpz_init(myAns1); mpz_init(myAns2);
-    mpz_init(x); mpz_init(b); mpz_init(g);
-    mpz_init(Test); mpz_init_set_ui(big2, 2);
-
-    unsigned long int j = 0, r, m = 1;
-
-    j = mpz_scan1 (s, 0);
-    mpz_div_2exp (s, s, j);
-
-    if (j == 1) {
-        mpz_add_ui (temp, p, 1);
-        mpz_div_2exp (temp, temp, 2);
-        mpz_powm (myAns1, a, temp, p);
-        mpz_neg (temp, myAns1);
-        mpz_mod (myAns2, temp, p);
-    } else {
-        mpz_div_2exp (temp, P1, 1);
-        mpz_powm (Legendre2, n, temp, p);
-        while (mpz_cmp_ui(Legendre2, 1) == 0) {
-            mpz_add_ui(n, n, 1);
-            mpz_powm (Legendre2, n, temp, p);
-        }
-
-        mpz_add_ui(temp, s, 1);
-        mpz_div_2exp(temp, temp, 1);
-        mpz_powm(x, a, temp, p);
-        mpz_powm(b, a, s, p);
-        mpz_powm(g, n, s, p);
-
-        r = j;
-        m = 1;
-        mpz_mod(Test, b, p);
-
-        while ((mpz_cmp_ui(Test, 1) != 0) && (m != 0)) {
-            m = 0;
-            mpz_mod(Test, b, p);
-            while (mpz_cmp_ui(Test, 1) != 0) {
-                m++;
-                mpz_pow_ui(temp, big2, m);
-                mpz_powm(Test, b, temp, p);
-            }
-            if (m != 0) {
-                mpz_pow_ui(temp, big2, r-m-1);
-                mpz_powm(temp, g, temp, p);
-                mpz_mul(temp, temp, x);
-                mpz_mod(x, temp, p);
-
-                mpz_pow_ui(temp, big2, r-m);
-                mpz_powm(g, g, temp, p);
-
-                mpz_mul(temp, b, g);
-                mpz_mod(b, temp, p);
-                r = m;
-            }
-            mpz_set_ui(Test, 0);
-        }
-        mpz_set(myAns1, x);
-        mpz_sub(temp, p, x);
-        mpz_mod(myAns2, temp, p);
-    }
-
-    quadRes.push_back(myAns1);
-    quadRes.push_back(myAns2);
-}
 
 static inline v1d outersect (v1d x, v1d y) {
     std::sort(x.begin(), x.end());
@@ -742,8 +346,9 @@ static v1d getPrimesQuadRes (mpz_t myN, double n) {
     return myps;
 }
 
-static inline unsigned long int positive_modulo(signed long int i,
-                                                signed long int n) {
+static inline unsigned long int positive_modulo (signed long int i,
+                                                  signed long int n) 
+{
     if (i < 0) {
         return (i % n + n);
     } else {
@@ -777,9 +382,10 @@ static v3d SieveLists (signed long int facLim,
     return outList;
 }
 
-void QuadraticSieve (mpz_t myNum, double fudge1,
+void quadraticSieve (mpz_t myNum, double fudge1,
                      double fudge2,
-                     unsigned long int LenB) {
+                     unsigned long int LenB) 
+{
     unsigned long int digCount = mpz_sizeinbase(myNum, 10);
     unsigned long int bits = mpz_sizeinbase(myNum, 2);
     unsigned long int myMalloc = bits + 5;

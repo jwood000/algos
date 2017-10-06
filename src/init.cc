@@ -5,7 +5,9 @@
 
 // include those that have an  extern "C" { .... } :
 #include "bigintegerR.h"
-#include "factor.h"
+#include "factorization.h"
+#include "quadres.h"
+#include "rsafactorize.h"
 #include <R_ext/Rdynload.h>
 
 #define CALLDEF(name, n)  {#name, (DL_FUNC) &name, n}
@@ -64,12 +66,15 @@ static R_CallMethodDef CallEntries[] = {
   CALLDEF(biginteger_log2, 1),
   CALLDEF(biginteger_log, 1),
 
-// factor.h :
-  CALLDEF(factorR, 1),
+// factorization.h :
   CALLDEF(getDivisorsC, 1),
-  CALLDEF(QuadraticSieveContainer, 1),
-  CALLDEF(QuadraticResidueContainer, 2),
 
+// quadres.h :
+  CALLDEF(QuadraticResidueContainer, 2),
+  
+// rsafactorize.h :
+  CALLDEF(QuadraticSieveContainer, 1),
+  
     {NULL, NULL, 0}
 };
 
