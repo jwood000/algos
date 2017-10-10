@@ -15,10 +15,13 @@
 
 #include "bigintegerR.h"
 
+typedef std::vector<signed long int> v1d;
+typedef std::vector<v1d> v2d;
+
 extern "C" {
-    SEXP QuadraticSieveContainer (SEXP n);
+    SEXP QuadraticSieveContainer (SEXP m, SEXP m2, SEXP n, SEXP FB);
 }
 
-void quadraticSieve (mpz_t a, double e1, double e2, unsigned long lb);
+void quadraticSieve (mpz_t a, double e1, double e2, unsigned long lb, bigvec & factors);
 
 #endif

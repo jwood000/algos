@@ -8,7 +8,6 @@
 #include <cmath>
 #include <gmp.h>
 
-
 #define USE_RINTERNALS
 #define R_NO_REMAP 			// avoid collisions with stl definitions
 

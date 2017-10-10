@@ -1,43 +1,50 @@
-/*! Factoring with Multiple Polynomial Quadratic Sieve.\
- *  
- *  From https://codegolf.stackexchange.com/ (Credit to user primo for answer)
- *      P., & Chowdhury, S. (2012, October 7). Fastest semiprime factorization. Retrieved October 06, 2017, from 
- *          https://codegolf.stackexchange.com/questions/8629/fastest-semiprime-factorization/9088#9088
- *          
- *  Paper 1
- *      URL: http://www.ams.org/journals/mcom/1987-48-177/S0025-5718-1987-0866119-8/S0025-5718-1987-0866119-8.pdf
- *      citation: Silverman, R. D. (1987). The Multiple Polynomial Quadratic Sieve. 
- *                  Mathematics of Computation, 48(177), 329-339. doi:10.2307/2007894
- *
- *  Paper 2
- *      URL: http://www.cs.virginia.edu/crab/QFS_Simple.pdf
- *      author: Eric Landquist
- *      date: December 14, 2001
- *      title: The Quadratic Sieve Factoring Algorithm
- *
- *  Paper 3
- *      URL: https://blogs.msdn.microsoft.com/devdev/2006/06/19/factoring-large-numbers-with-quadratic-sieve/
- *      author: MSDN Archive
- *      date: June 19, 2006
- *      title: Factoring large numbers with quadratic sieve
- *
- *  Paper 4
- *      URL: http://www.math.colostate.edu/~hulpke/lectures/m400c/quadsievex.pdf
- *
- *  Paper 5
- *      URL: http://library.msri.org/books/Book44/files/03carl.pdf
- *      citation: Pomerance, C. (2008). Smooth numbers and the quadratic sieve. In Algorithmic
- *       Number Theory Lattices, Number Fields, Curves and Cryptography (pp. 69-81). 
- *       Cambridge: Cambridge University Press.
- *
- *  Paper 6
- *      URL: http://micsymposium.org/mics_2011_proceedings/mics2011_submission_28.pdf
- *      author: Chad Seibert
- *      date: March 16, 2011
- *      title: Integer Factorization using the Quadratic Sieve
- * 
- */
+/* Factoring with Multiple Polynomial Quadratic Sieve.
+ 
+References:
+    From https://codegolf.stackexchange.com/ (Credit to user primo for answer)
+       P., & Chowdhury, S. (2012, October 7). Fastest semiprime factorization. Retrieved October 06, 2017, from 
+           https://codegolf.stackexchange.com/questions/8629/fastest-semiprime-factorization/9088#9088
+    Paper 1
+       URL: http://www.ams.org/journals/mcom/1987-48-177/S0025-5718-1987-0866119-8/S0025-5718-1987-0866119-8.pdf
+       citation: Silverman, R. D. (1987). The Multiple Polynomial Quadratic Sieve. 
+               Mathematics of Computation, 48(177), 329-339. doi:10.2307/2007894
+    Paper 2
+       URL: http://www.cs.virginia.edu/crab/QFS_Simple.pdf
+       author: Eric Landquist
+       date: December 14, 2001
+       title: The Quadratic Sieve Factoring Algorithm
+    Paper 3
+       URL: https://blogs.msdn.microsoft.com/devdev/2006/06/19/factoring-large-numbers-with-quadratic-sieve/
+       author: MSDN Archive
+       date: June 19, 2006
+       title: Factoring large numbers with quadratic sieve
+    Paper 4
+       URL: http://www.math.colostate.edu/~hulpke/lectures/m400c/quadsievex.pdf
+    Paper 5
+       URL: http://library.msri.org/books/Book44/files/03carl.pdf
+       citation: Pomerance, C. (2008). Smooth numbers and the quadratic sieve. In Algorithmic
+       Number Theory Lattices, Number Fields, Curves and Cryptography (pp. 69-81). 
+       Cambridge: Cambridge University Press.
+    Paper 6
+       URL: http://micsymposium.org/mics_2011_proceedings/mics2011_submission_28.pdf
+       author: Chad Seibert
+       date: March 16, 2011
+       title: Integer Factorization using the Quadratic Sieve
 
+This program is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program.  If not, see http://www.gnu.org/licenses/. 
+*/
+
+#include <Rcpp.h>
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
@@ -46,6 +53,8 @@
 #include <math.h>
 #include "Rgmp.h"
 #include "quadraticsieve.h"
+
+using namespace Rcpp;
 
 typedef std::vector<signed long int> v1d;
 typedef std::vector<v1d> v2d;
@@ -63,37 +72,10 @@ static inline v1d outersect (v1d x, v1d y) {
     return v;
 }
 
-static bigvec getFacs (bigvec v1, bigvec v2, mpz_t n) {
-    mpz_t x, y;
-    bigvec myAns;
-
-    mpz_init_set_ui(x, 1);
-    mpz_init_set_ui(y, 1);
-
-    signed long int sv1 = v1.size();
-    signed long int sv2 = v2.size();
-    signed long int i;
-
-    for (i = 0; i < sv1; i++) {mpz_mul(x, x, v1[i].value.getValue());}
-    mpz_mod(x, x, n);
-
-    for (i = 0; i < sv2; i++) {mpz_mul(y, y, v2[i].value.getValue());}
-    mpz_mod(y, y, n);
-
-    myAns.push_back(x);
-    myAns.push_back(y);
-    std::sort(myAns.value.begin(), myAns.value.end());
-
-    mpz_clear(x);
-    mpz_clear(y);
-
-    return myAns;
-}
-
 static void reduceMatrix (unsigned long int n1,
                           unsigned long int n2, v2d & nullMat, v1d & myCols) {
     unsigned long int i, j, myMin, temp, myMax = 0;
-    std::vector<signed long int>::iterator it;
+    v1d::iterator it;
     v1d myOnes;
 
     for (i = 0; i < n1; i++) {
@@ -124,10 +106,10 @@ static void reduceMatrix (unsigned long int n1,
     }
 
     unsigned long int newLen;
-
+    
     if (myMax < n2 && myMax != 0) {
         for (j = myMax; j < n2; j++) {
-            nullMat.erase(nullMat.begin() + j);
+            nullMat.erase(nullMat.begin() + myMax);
         }
         newLen = nullMat.size();
     } else {
@@ -135,7 +117,7 @@ static void reduceMatrix (unsigned long int n1,
     }
 
     bool allZero;
-
+    
     if (newLen > 0) {
         i = 0;
         while (i < newLen) {
@@ -172,133 +154,180 @@ static void reduceMatrix (unsigned long int n1,
     }
 }
 
-static bool solutionSearch (v2d mat, mpz_t M2, mpz_t n, v1d FB) {
-    unsigned long int nrow = mat.size(), ncol = mat[0].size();
+static inline v1d myIntToBit (unsigned long int x, 
+                              unsigned long int dig) {
+    unsigned long int i = 0;
+    v1d binaryVec(dig);
+    
+    while (x > 0) {
+        binaryVec[i] = x % 2;
+        x = x/2;
+        i++;
+    }
+    
+    return binaryVec;
+}
+
+static bool solutionSearch (v2d mat, mpz_t n, v1d FB, mpz_t * test, bigvec & bigReturn) { 
+    unsigned long int nr1 = mat.size(), numCol = mat[0].size();
     signed long int i, j, k, r = 0;
     v2d nullMat;
 
-    for (j = 0; j < ncol; j++) {
+    for (j = 0; j < numCol; j++) {
         i = 0;
-        while (mat[i][j] == 0 && i < nrow) {i++;}
-        if (i < nrow) {
-            nullMat.push_back(v1d(nrow, 0));
-            for (k = 0; k < nrow; k++) {nullMat[r][k] = mat[k][j] % 2;}
+        while (mat[i][j] == 0 && i < nr1) {i++;}
+        if (i < nr1) {
+            nullMat.push_back(v1d(nr1, 0));
+            for (k = 0; k < nr1; k++) {nullMat[r][k] = mat[k][j] % 2;}
             r++;
         }
     }
-
-    v1d myCols(ncol, 0);
-    for (i = 0; i < myCols.size(); i++) {myCols[i] = i;}
-    reduceMatrix (ncol, nrow, nullMat, myCols);
-
-    unsigned long int tLen, newNrow = nullMat.size();
-    std::vector<signed long int>::iterator it, it2;
-    v2d myList(ncol, v1d());
-    v1d freeVariables, temp;
-    freeVariables.reserve(ncol);
     
-    if (ncol > newNrow) {
-        for (i = newNrow + 1; i < ncol; i++) {freeVariables.push_back(myCols[i]);}
+    unsigned long int nr2 = nullMat.size();
+    numCol = nr1;
+    v1d myCols(numCol, 0);
+    for (i = 0; i < numCol; i++) {myCols[i] = i;}
+    reduceMatrix (numCol, nr2, nullMat, myCols);
+    unsigned long int newNrow = nullMat.size();
+
+    unsigned long int tLen;
+    v1d::iterator it, it2;
+    v2d myList(numCol, v1d());
+    v1d freeVariables, temp;
+    freeVariables.reserve(numCol);
+
+    if (numCol > newNrow) {
+        for (i = newNrow; i < numCol; i++) {freeVariables.push_back(myCols[i]);}
         for (it = freeVariables.begin(); it < freeVariables.end(); it++) {
             myList[*it].push_back(*it);
         }
     }
-    
-    bool allBigNewNrow;
-    unsigned long int lenI;
-    v1d newVec;
+     
+    bool allBiggerNewNrow;
     
     if (newNrow > 0) {
         for (i = newNrow; i > 0; i--) {
-            temp.reserve(ncol);
-            for (j = 0; j < ncol; j++) {
-                if (nullMat[i][j] == 1) {
+            temp.reserve(numCol);
+            for (j = 0; j < numCol; j++) {
+                if (nullMat[i-1][j] == 1) {
                     temp.push_back(j);
                 }
             }
-            if (temp.size() == 1) {
-                for (j = 0; j < nrow; j++) {nullMat[j][temp[0]] = 0;}
-                myList[myCols[i]].clear();
-                myList[myCols[i]].push_back(0);
+           if (temp.size() == 1) {
+                for (j = 0; j < newNrow; j++) {nullMat[j][temp[0]] = 0;}
+                myList[myCols[i-1]].clear();
+                myList[myCols[i-1]].push_back(0);
             } else {
                 temp.clear();
-                temp.reserve(ncol);
-                allBigNewNrow = true;
-                for (j = i+1; j < ncol; j++) {
-                    if (nullMat[i][j] == 1) {
+                temp.reserve(numCol);
+                allBiggerNewNrow = true;
+                for (j = i; j < numCol; j++) {
+                    if (nullMat[i-1][j] == 1) {
                         temp.push_back(j);
-                        if (allBigNewNrow) {
-                            if (j < newNrow) {  // possibly need to change to <=
-                                allBigNewNrow = false;
+                        if (allBiggerNewNrow) {
+                            if (j < newNrow) {
+                                allBiggerNewNrow = false;
                             }
                         }
                     }
                 }
-                
-                if (allBigNewNrow) {
-                    myList[myCols[i]].clear();
-                    for (j = 0; j < temp.size(); j++) {
-                        tLen = myList[myCols[temp[j]]].size();
+
+                if (allBiggerNewNrow) {
+                    myList[myCols[i-1]].clear();
+                    for (it = temp.begin(); it < temp.end(); it++) {
+                        tLen = myList[myCols[*it]].size();
                         if (tLen > 0) {
-                            for (k = 0; k < tLen; j++) {
-                                myList[myCols[i]].push_back(myList[myCols[temp[k]]][j]);
+                            for (j = 0; j < tLen; j++) {
+                                myList[myCols[i-1]].push_back(myList[myCols[*it]][j]);
                             }
                         }
                     }
                 } else {
-                    lenI = myList[myCols[i]].size();
                     for (it = temp.begin(); it < temp.end(); it++) {
-                        Rprintf("\n%d", lenI);
-                        newVec = outersect(myList[myCols[i]], myList[myCols[*it]]);
-                        myList[myCols[i]].assign(newVec.begin(), newVec.end());
+                        myList[myCols[i-1]] = outersect(myList[myCols[i-1]], myList[myCols[*it]]);
                     }
                 }
             }
         }
     }
-    
-    unsigned long int lenFree = freeVariables.size();
-    
-    if (lenFree > 0) {
-        
-    }
-    return(true);
-}
 
-// ## still in SOLUTION SEARCH
-//     listSol <- nullMat[[1]]; freeVar <- nullMat[[2]]; LF <- length(freeVar)
-//     if (LF > 0L) {
-//         for (i in 2:min(10^8,(2^LF + 1L))) {
-//             PosAns <- MyIntToBit(i, LF)
-//             posVec <- sapply(listSol, function(x) {
-//                 t <- which(freeVar %in% x)
-//                 if (length(t)==0L) {
-//                     0
-//                 } else {
-//                     sum(PosAns[t])%%2L
-//                 }
-//             })
-//             ansVec <- which(posVec==1L)
-//             if (length(ansVec)>0) {
-//
-//                 if (length(ansVec) > 1L) {
-//                     myY <- apply(mymat[ansVec,],2,sum)
-//                 } else {
-//                     myY <- mymat[ansVec,]
-//                 }
-//
-//                 if (sum(myY %% 2) < 1) {
-//                     myY <- as.integer(myY/2)
-//                     myY <- pow.bigz(FB,myY[-1])
-//                     temp <- GetFacs(M2[ansVec], myY, n)
-//                     if (!(1==temp[1]) && !(1==temp[2])) {
-//                         return(temp)
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
+    unsigned long int myLim, myCheck, lenFree = freeVariables.size();
+    v1d posAns, ansVec, yExponents(mat[0].size(), 0), posVec(numCol, 0);
+    ansVec.reserve(numCol);
+    mpz_t mpzTemp, xMpz, yMpz;
+
+    if (lenFree > 0) {
+        mpz_init (mpzTemp);
+        mpz_init (xMpz);
+        mpz_init (yMpz);
+        mpz_ui_pow_ui (mpzTemp, 2, lenFree);
+        mpz_sub_ui (mpzTemp, mpzTemp, 1);
+
+        if (mpz_cmp_ui(mpzTemp, 100000000) > 0) {
+            myLim = mpz_get_ui(mpzTemp);
+        } else {
+            myLim = 100000000;
+        }
+        
+        for (i = 2; i <= 2; i++) {
+            posAns = myIntToBit(i, lenFree);
+            for (j = 0; j < myList.size(); j++) {
+                for (it = myList[j].begin(); it < myList[j].end(); it++) {
+                    for (k = 0; k < lenFree; k++) {
+                        if (freeVariables[k] == *it) {
+                            posVec[j] += posAns[k] % 2;
+                            break;
+                        }
+                    }
+                }
+                if (posVec[j]==1) {ansVec.push_back(j);}
+            }
+            
+            if (ansVec.size() > 0) {
+                myCheck = 0;
+                for (j = 0; j < mat[0].size(); j++) {
+                    for (it = ansVec.begin(); it < ansVec.end(); it++) {
+                        yExponents[j] += mat[*it][j];
+                    }
+                    myCheck += (yExponents[j] % 2);
+                    yExponents[j] /= 2;
+                }
+                
+                if (myCheck == 0) {
+                    yExponents.erase(yExponents.begin());
+                    mpz_set_ui(xMpz, 1);
+                    mpz_set_ui(yMpz, 1);
+                    
+                    for (it = ansVec.begin(); it < ansVec.end(); it++) {
+                         mpz_mul(xMpz, xMpz, test[*it]);
+                    }
+                    
+                    for (j = 0; j < yExponents.size(); j++) {
+                        mpz_ui_pow_ui(mpzTemp, FB[j], yExponents[j]);
+                        mpz_mul(yMpz, yMpz, mpzTemp);
+                    }
+                    
+                    mpz_mod(xMpz, xMpz, n);
+                    mpz_mod(yMpz, yMpz, n);
+                    
+                    mpz_sub(mpzTemp, xMpz, yMpz);
+                    mpz_gcd(mpzTemp, mpzTemp, n);
+                    bigReturn.push_back(mpzTemp);
+                    
+                    mpz_add(mpzTemp, xMpz, yMpz);
+                    mpz_gcd(mpzTemp, mpzTemp, n);
+                    bigReturn.push_back(mpzTemp);
+                    std::sort(bigReturn.value.begin(), bigReturn.value.end());
+                    
+                    if (mpz_cmp_ui(bigReturn[0].value.getValue(), 1) == 0) {
+                        return (true);
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
 
 static v1d getPrimesQuadRes (mpz_t myN, double n) {
     std::vector<bool> primes(n+1, true);
@@ -384,7 +413,7 @@ static v3d SieveLists (signed long int facLim,
 
 void quadraticSieve (mpz_t myNum, double fudge1,
                      double fudge2,
-                     unsigned long int LenB) 
+                     unsigned long int LenB, bigvec & factors)
 {
     unsigned long int digCount = mpz_sizeinbase(myNum, 10);
     unsigned long int bits = mpz_sizeinbase(myNum, 2);
@@ -476,7 +505,7 @@ void quadraticSieve (mpz_t myNum, double fudge1,
         //    intercept           x^1           x^2           x^3           x^4
         // -1650.8252165   176.9043861    -6.7567603     0.1085362    -0.0005955
 
-        if (LenB==0L) {
+        if (LenB==0) {
             LenB = 1000*ceil(176.9043861*digCount - 6.7567603*pow(digCount,2) +
                 0.1085362*pow(digCount,3) - 0.0005955*pow(digCount,4) - 1650.8252165);
         }
@@ -587,8 +616,6 @@ void quadraticSieve (mpz_t myNum, double fudge1,
     mpz_t temp;
     mpz_init2(temp, myMalloc);
 
-    Rprintf("\nLenB = %d", LenB);
-
     for (i = 0; i < LenB2; i++) {
         mpz_pow_ui(temp, largeInterval[i], 2);
         mpz_sub(sqrDiff[i], temp, myNum);
@@ -626,11 +653,9 @@ void quadraticSieve (mpz_t myNum, double fudge1,
         j++;
     }
 
-    unsigned long int tempSize, myIndex, minPrime;
+    unsigned long int tempSize, minPrime;
     mpz_mul_ui(temp, sqrtInt, Upper);
     minPrime = mpz_sizeinbase(temp, 10) * 2;
-    Rprintf("\nminPrimeforreal = %d", minPrime);
-    minPrime = 2;
 
     for (i = 2; i < facSize; i++) {
         if (facBase[i] > minPrime) {
@@ -644,7 +669,7 @@ void quadraticSieve (mpz_t myNum, double fudge1,
     v1d largeLogs;
 
     for (i = 0; i < LenB2; i++) {
-        if (myLogs[i] > 23.91848) {
+        if (myLogs[i] > theCut) {
             largeLogs.push_back(i);
         }
     }
@@ -658,8 +683,7 @@ void quadraticSieve (mpz_t myNum, double fudge1,
         mpz_set(testInterval[i], largeInterval[largeLogs[i]]);
         mpz_set(newSqrDiff[i], sqrDiff[largeLogs[i]]);
     }
-    Rprintf("\nminP = %d", minPrime);
-    Rprintf("\ntheCut = %f\n", theCut);
+    
     bool GoForIt = false;
     v2d myMat(largeLogsSize, v1d(facSize+1, 0));
     i = 0;
@@ -689,10 +713,6 @@ void quadraticSieve (mpz_t myNum, double fudge1,
                 }
                 divides = true;
             }
-            if (mpz_cmp_ui(newSqrDiff[j], 1) == 0) {
-                sFacs.push_back(j);
-                gmp_printf ("%Zd\n", sqrDiff[largeLogs[j]]);
-            }
         }
     }
 
@@ -709,7 +729,7 @@ void quadraticSieve (mpz_t myNum, double fudge1,
                 newMat[i][j] = myMat[sFacs[i]][j];
             }
         }
-        bSolution = solutionSearch(newMat, myNum, myNum, facBase);
+        bSolution = solutionSearch (newMat, myNum, facBase, sqrDiff, factors);
     }
 
     for (i = 0; i < largeLogsSize; i++) {
@@ -731,5 +751,4 @@ void quadraticSieve (mpz_t myNum, double fudge1,
 
 // testNum <- gmp::prod.bigz(gmp::nextprime(gmp::urand.bigz(2,35)))
 
-// // 185081
 

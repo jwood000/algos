@@ -8,6 +8,7 @@
  * factors [out]: the list of factors
  *
  */
+
 void quadraticSieve (mpz_t myNum, double fudge1,
                      double fudge2,
                      unsigned long int LenB, bigvec & factors);

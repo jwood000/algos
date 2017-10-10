@@ -1,5 +1,4 @@
 /*! 
- *  ******* Original factor.cc comments (pertaining to factorR) *******
  *  \file factorization.cc
  *  \brief C functions used for integer factorization
  *
@@ -13,8 +12,7 @@
  *       See factor.cc from the R gmp package for more details.
  *          Original C code from libgmp.
  *
- *  \note Licence: GPL
- *  
+ *  \note Licence: GPL (>=) 2
  */
 
 #include "Rgmp.h"
@@ -69,7 +67,7 @@ SEXP getDivisorsC (SEXP n) {
                 k++;
             }
             
-            unsigned long int mySize, ind, facSize = 1, numFacs = 1;
+            unsigned long int ind, facSize = 1, numFacs = 1;
             for (i = 0; i <= numUni; i++) {numFacs *= (lengths[i]+1);}
             
             myFacs.value.reserve(numFacs);
