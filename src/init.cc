@@ -73,7 +73,7 @@ static R_CallMethodDef CallEntries[] = {
   CALLDEF(QuadraticResidueContainer, 2),
   
 // rsafactorize.h :
-  CALLDEF(QuadraticSieveContainer, 4),
+  CALLDEF(QuadraticSieveContainer, 1),
   
     {NULL, NULL, 0}
 };

@@ -19,7 +19,7 @@ typedef std::vector<signed long int> v1d;
 typedef std::vector<v1d> v2d;
 
 extern "C" {
-    SEXP QuadraticSieveContainer (SEXP m, SEXP m2, SEXP n, SEXP FB);
+    SEXP QuadraticSieveContainer (SEXP n);
 }
 
 void quadraticSieve (mpz_t a, double e1, double e2, unsigned long lb, bigvec & factors);

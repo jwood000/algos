@@ -24,16 +24,9 @@ using namespace Rcpp;
 typedef std::vector<signed long int> v1d;
 typedef std::vector<v1d> v2d;
 
-SEXP QuadraticSieveContainer (SEXP m, SEXP m2, SEXP n, SEXP FB) {
+SEXP QuadraticSieveContainer (SEXP n) {
     bigvec nBig = bigintegerR::create_bignum(n);
-    bigvec m2Big = bigintegerR::create_bignum(m2);
     mpz_t nmpz;
-    unsigned long int i, mySize = m2Big.size();
-    v1d myMat, freeV = Rcpp::as<v1d>(FB);
-    v2d mat = Rcpp::as<v2d>(m);
-    mpz_t big2mpz[mySize];
-    for (i = 0; i < mySize; i++) {mpz_init_set(big2mpz[i], m2Big[i].value.getValue());}
-    
     mpz_init_set(nmpz, nBig[0].value.getValue());
     bigvec result;
     

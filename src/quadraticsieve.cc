@@ -168,7 +168,7 @@ static inline v1d myIntToBit (unsigned long int x,
     return binaryVec;
 }
 
-static bool solutionSearch (v2d mat, mpz_t n, v1d FB, mpz_t * test, bigvec & factors) { 
+static void solutionSearch (v2d mat, mpz_t n, v1d FB, mpz_t * test, bigvec & factors) { 
     unsigned long int nr1 = mat.size(), numCol = mat[0].size();
     signed long int i, j, k, r = 0;
     v2d nullMat;
@@ -254,22 +254,26 @@ static bool solutionSearch (v2d mat, mpz_t n, v1d FB, mpz_t * test, bigvec & fac
     unsigned long int myLim, myCheck, lenFree = freeVariables.size();
     v1d posAns, ansVec, yExponents(mat[0].size(), 0), posVec(numCol, 0);
     ansVec.reserve(numCol);
-    mpz_t mpzTemp, xMpz, yMpz;
+    bool bExit = false;
+    mpz_t mpzTemp1, mpzTemp2, mpzMin, xMpz, yMpz;
 
     if (lenFree > 0) {
-        mpz_init (mpzTemp);
+        mpz_init (mpzTemp1);
+        mpz_init (mpzTemp2);
+        mpz_init (mpzMin);
         mpz_init (xMpz);
         mpz_init (yMpz);
-        mpz_ui_pow_ui (mpzTemp, 2, lenFree);
-        mpz_sub_ui (mpzTemp, mpzTemp, 1);
+        mpz_ui_pow_ui (mpzTemp1, 2, lenFree);
+        mpz_sub_ui (mpzTemp1, mpzTemp1, 1);
 
-        if (mpz_cmp_ui(mpzTemp, 100000000) > 0) {
-            myLim = mpz_get_ui(mpzTemp);
+        if (mpz_cmp_ui(mpzTemp1, 100000000) > 0) {
+            myLim = mpz_get_ui(mpzTemp1);
         } else {
             myLim = 100000000;
         }
         
         for (i = 1; i <= myLim; i++) {
+            if (bExit) {break;}
             posAns = myIntToBit(i, lenFree);
             for (j = 0; j < myList.size(); j++) {
                 for (it = myList[j].begin(); it < myList[j].end(); it++) {
@@ -303,37 +307,40 @@ static bool solutionSearch (v2d mat, mpz_t n, v1d FB, mpz_t * test, bigvec & fac
                     }
                     
                     for (j = 0; j < yExponents.size(); j++) {
-                        mpz_ui_pow_ui(mpzTemp, FB[j], yExponents[j]);
-                        mpz_mul(yMpz, yMpz, mpzTemp);
+                        mpz_ui_pow_ui(mpzTemp1, FB[j], yExponents[j]);
+                        mpz_mul(yMpz, yMpz, mpzTemp1);
                     }
                     
                     mpz_mod(xMpz, xMpz, n);
                     mpz_mod(yMpz, yMpz, n);
+                    mpz_sub(mpzTemp1, xMpz, yMpz);
+                    mpz_gcd(mpzTemp1, mpzTemp1, n);
+                    mpz_add(mpzTemp2, xMpz, yMpz);
+                    mpz_gcd(mpzTemp2, mpzTemp2, n);
                     
-                    mpz_sub(mpzTemp, xMpz, yMpz);
-                    mpz_gcd(mpzTemp, mpzTemp, n);
-                    factors.push_back(mpzTemp);
-                    
-                    mpz_add(mpzTemp, xMpz, yMpz);
-                    mpz_gcd(mpzTemp, mpzTemp, n);
-                    factors.push_back(mpzTemp);
-                    std::sort(factors.value.begin(), factors.value.end());
-                    gmp_printf("%s is an mpz %Zd\n", "here", factors[1].value.getValue());
-                    if (mpz_cmp_ui(factors[0].value.getValue(), 1) > 0) {
-                        gmp_printf("%s is an mpz %Zd\n", "here", factors[1].value.getValue());    
-                        return (true);
+                    if (mpz_cmp(mpzTemp1, mpzTemp2) < 0) {
+                        mpz_set(mpzMin, mpzTemp1);
                     } else {
-                        factors.clear();
-                        posVec = v1d(numCol, 0);
-                        yExponents = v1d(mat[0].size(), 0);
-                        ansVec.clear();
-                        ansVec.reserve(numCol);
+                        mpz_set(mpzMin, mpzTemp2);
+                    }
+                    
+                    if (mpz_cmp_ui(mpzMin, 1) > 0) {
+                        factors.push_back(mpzTemp1);
+                        factors.push_back(mpzTemp2);
+                        std::sort(factors.value.begin(), factors.value.end());
+                        bExit = true;
                     }
                 }
             }
+            posVec = v1d(numCol, 0);
+            yExponents = v1d(mat[0].size(), 0);
+            ansVec.clear();
+            ansVec.reserve(numCol);
         }
     }
-    return false;
+    
+    mpz_clear(mpzTemp1); mpz_clear(mpzTemp2);
+    mpz_clear(mpzMin); mpz_clear(xMpz); mpz_clear(yMpz);
 }
 
 static v1d getPrimesQuadRes (mpz_t myN, double n) {
@@ -750,7 +757,6 @@ void quadraticSieve (mpz_t myNum, double fudge1,
     }
 
     unsigned long int lenM = sFacs.size();
-    bool myReturn;
 
     if (lenM > 0) {
         mpz_t newTestInt[lenM];
@@ -762,8 +768,7 @@ void quadraticSieve (mpz_t myNum, double fudge1,
                 newMat[i][j] = myMat[sFacs[i]][j];
             }
         }
-        myReturn = solutionSearch (newMat, myNum, facBase, newTestInt, factors);
-        Rcpp::print(wrap(myReturn));
+        solutionSearch (newMat, myNum, facBase, newTestInt, factors);
     }
 
     for (i = 0; i < largeLogsSize; i++) {
