@@ -168,7 +168,7 @@ static inline v1d myIntToBit (unsigned long int x,
     return binaryVec;
 }
 
-static bool solutionSearch (v2d mat, mpz_t n, v1d FB, mpz_t * test, bigvec & bigReturn) { 
+static bool solutionSearch (v2d mat, mpz_t n, v1d FB, mpz_t * test, bigvec & factors) { 
     unsigned long int nr1 = mat.size(), numCol = mat[0].size();
     signed long int i, j, k, r = 0;
     v2d nullMat;
@@ -269,7 +269,7 @@ static bool solutionSearch (v2d mat, mpz_t n, v1d FB, mpz_t * test, bigvec & big
             myLim = 100000000;
         }
         
-        for (i = 2; i <= 2; i++) {
+        for (i = 1; i <= myLim; i++) {
             posAns = myIntToBit(i, lenFree);
             for (j = 0; j < myList.size(); j++) {
                 for (it = myList[j].begin(); it < myList[j].end(); it++) {
@@ -312,15 +312,22 @@ static bool solutionSearch (v2d mat, mpz_t n, v1d FB, mpz_t * test, bigvec & big
                     
                     mpz_sub(mpzTemp, xMpz, yMpz);
                     mpz_gcd(mpzTemp, mpzTemp, n);
-                    bigReturn.push_back(mpzTemp);
+                    factors.push_back(mpzTemp);
                     
                     mpz_add(mpzTemp, xMpz, yMpz);
                     mpz_gcd(mpzTemp, mpzTemp, n);
-                    bigReturn.push_back(mpzTemp);
-                    std::sort(bigReturn.value.begin(), bigReturn.value.end());
-                    
-                    if (mpz_cmp_ui(bigReturn[0].value.getValue(), 1) == 0) {
+                    factors.push_back(mpzTemp);
+                    std::sort(factors.value.begin(), factors.value.end());
+                    gmp_printf("%s is an mpz %Zd\n", "here", factors[1].value.getValue());
+                    if (mpz_cmp_ui(factors[0].value.getValue(), 1) > 0) {
+                        gmp_printf("%s is an mpz %Zd\n", "here", factors[1].value.getValue());    
                         return (true);
+                    } else {
+                        factors.clear();
+                        posVec = v1d(numCol, 0);
+                        yExponents = v1d(mat[0].size(), 0);
+                        ansVec.clear();
+                        ansVec.reserve(numCol);
                     }
                 }
             }
@@ -375,39 +382,45 @@ static v1d getPrimesQuadRes (mpz_t myN, double n) {
     return myps;
 }
 
-static inline unsigned long int positive_modulo (signed long int i,
-                                                  signed long int n) 
-{
-    if (i < 0) {
-        return (i % n + n);
-    } else {
-        return (i % n);
-    }
-}
-
 static v3d SieveLists (signed long int facLim,
-                       std::vector<signed long int> FBase,
+                       v1d FBase,
                        signed long int vecLen,
-                       signed long int myLow,
+                       mpz_t * sqrD,
                        v2d sieveD)
 {
     v3d outList(facLim, v2d(2, v1d()));
     unsigned long int tLen1, tLen2;
-    signed long int i, j, modLow, vStrt1, vStrt2;
-
-    for (i = 2; i < facLim; i++) {
-        modLow = positive_modulo(myLow, FBase[i]);
-        vStrt1 = ((sieveD[i][0] - myLow) % FBase[i]) + 1;
+    signed long int i, j, vStrt1, vStrt2;
+    mpz_t modTest;
+    mpz_init(modTest);
+    
+    for (i = 1; i < facLim; i++) {
+        for (j = 0; j < vecLen; j++) {
+            mpz_mod_ui(modTest, sqrD[j], FBase[i]);
+            if (mpz_cmp_ui(modTest, 0) == 0) {
+                vStrt1 = j;
+                break;
+            }
+        }
+        
         tLen1 = (vecLen - vStrt1)/FBase[i];
         outList[i][0].reserve(tLen1);
-        for (j = vStrt1; j <= vecLen; j += FBase[i]) {outList[i][0].push_back(j-1);}
+        for (j = vStrt1; j < vecLen; j += FBase[i]) {outList[i][0].push_back(j);}
+        
+        for (j = vStrt1+1; j < vecLen; j++) {
+            mpz_mod_ui(modTest, sqrD[j], FBase[i]);
+            if (mpz_cmp_ui(modTest, 0) == 0) {
+                vStrt2 = j;
+                break;
+            }
+        }
 
-        vStrt2 = ((sieveD[i][1] - myLow) % FBase[i]) + 1;
         tLen2 = (vecLen - vStrt2)/FBase[i];
         outList[i][1].reserve(tLen2);
-        for (j = vStrt2; j <= vecLen; j += FBase[i]) {outList[i][1].push_back(j-1);}
+        for (j = vStrt2; j < vecLen; j += FBase[i]) {outList[i][1].push_back(j);}
     }
-
+    
+    mpz_clear(modTest);
     return outList;
 }
 
@@ -518,7 +531,7 @@ void quadraticSieve (mpz_t myNum, double fudge1,
     mpz_sqrt(sqrtInt, myNum);
     v1d myInterval;
 
-    signed long int i, j;
+    signed long int i, j, k;
     signed long int Lower = -1*LenB, Upper = LenB, LenB2 = 2*LenB+1;
     myInterval.reserve(LenB2);
     for (i = Lower; i <= Upper; i++) {myInterval.push_back(i);}
@@ -526,7 +539,11 @@ void quadraticSieve (mpz_t myNum, double fudge1,
     v2d SieveDist(facSize, v1d(2));
     SieveDist[0][0] = 1;
     SieveDist[0][1] = 1;
-
+    
+    // Getting quadratic residues. See tonellishanks.cc for more 
+    // details. The array "TS" was used here so make the code 
+    // more concise and since everything will be stored in
+    // SieveDist, TS can easily be cleared from memory when done.
     mpz_t TS[13];
     for (i = 0; i < 13; i++) {mpz_init2(TS[i], myMalloc);}
     unsigned long int pow2;
@@ -596,11 +613,9 @@ void quadraticSieve (mpz_t myNum, double fudge1,
         SieveDist[i][0] = mpz_get_si(TS[2]);
         SieveDist[i][1] = mpz_get_si(TS[3]);
     }
-
+    
+    // Finished generating residues.. now free memory
     for (i = 0; i < 13; i++) {mpz_clear(TS[i]);}
-
-    v3d CoolList;
-    CoolList = SieveLists(facSize, facBase, LenB2, Lower, SieveDist);
 
     mpz_t largeInterval[LenB2];
     mpz_t sqrDiff[LenB2];
@@ -620,6 +635,9 @@ void quadraticSieve (mpz_t myNum, double fudge1,
         mpz_pow_ui(temp, largeInterval[i], 2);
         mpz_sub(sqrDiff[i], temp, myNum);
     }
+    
+    v3d CoolList;
+    CoolList = SieveLists(facSize, facBase, LenB2, sqrDiff, SieveDist);
 
     mpz_mul_ui(temp, myNum, 2);
     mpz_sqrt(temp, temp);
@@ -653,11 +671,24 @@ void quadraticSieve (mpz_t myNum, double fudge1,
         j++;
     }
 
-    unsigned long int tempSize, minPrime;
+    unsigned long int tempSize, minPrime, evenStrt;
     mpz_mul_ui(temp, sqrtInt, Upper);
     minPrime = mpz_sizeinbase(temp, 10) * 2;
-
-    for (i = 2; i < facSize; i++) {
+    v2d indexDiv(LenB2, v1d());
+    
+    if (mpz_even_p(sqrDiff[0]) != 0) {
+        evenStrt = 0;
+    } else {
+        evenStrt = 1;
+    }
+    
+    for (j = evenStrt; j < LenB2; j += 2) {indexDiv[j].push_back(0);}
+    
+    for (i = 1; i < facSize; i++) {
+        for (k = 0; k <= 1; k++) {
+            tempSize = CoolList[i][k].size();
+            for (j = 0; j < tempSize; j++) {indexDiv[CoolList[i][k][j]].push_back(i);}
+        }
         if (facBase[i] > minPrime) {
             tempSize = CoolList[i][0].size();
             for (j = 0; j < tempSize; j++) {myLogs[CoolList[i][0][j]] = myLogs[CoolList[i][0][j]] + LnFB[i];}
@@ -673,7 +704,7 @@ void quadraticSieve (mpz_t myNum, double fudge1,
             largeLogs.push_back(i);
         }
     }
-
+    
     unsigned long int largeLogsSize = largeLogs.size();
     mpz_t testInterval[largeLogsSize], newSqrDiff[largeLogsSize];
 
@@ -700,24 +731,26 @@ void quadraticSieve (mpz_t myNum, double fudge1,
     if (largeLogsSize > 0) {
         GoForIt = true;
         bool divides = true;
-
+        
         for (j = 0; j < largeLogsSize; j++) {
-            for (i = 0; i < facSize; i++) {
+            tempSize = indexDiv[largeLogs[j]].size();
+            for (i = 0; i < tempSize; i++) {
                 while (divides) {
-                    mpz_fdiv_qr_ui(quot, rem, newSqrDiff[j], facBase[i]);
+                    mpz_fdiv_qr_ui(quot, rem, newSqrDiff[j], facBase[indexDiv[largeLogs[j]][i]]);
                     divides = (mpz_cmp_ui(rem, 0) == 0);
                     if (divides) {
                         mpz_set(newSqrDiff[j], quot);
-                        myMat[j][i+1]++;
+                        myMat[j][indexDiv[largeLogs[j]][i]+1]++;
                     }
                 }
                 divides = true;
             }
+            if (mpz_cmp_ui(newSqrDiff[j], 1) == 0) {sFacs.push_back(j);}
         }
     }
 
     unsigned long int lenM = sFacs.size();
-    bool bSolution = false;
+    bool myReturn;
 
     if (lenM > 0) {
         mpz_t newTestInt[lenM];
@@ -729,7 +762,8 @@ void quadraticSieve (mpz_t myNum, double fudge1,
                 newMat[i][j] = myMat[sFacs[i]][j];
             }
         }
-        bSolution = solutionSearch (newMat, myNum, facBase, sqrDiff, factors);
+        myReturn = solutionSearch (newMat, myNum, facBase, newTestInt, factors);
+        Rcpp::print(wrap(myReturn));
     }
 
     for (i = 0; i < largeLogsSize; i++) {
